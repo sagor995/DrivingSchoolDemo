@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Driving School – Demo Prototype</title>
+  <style>
+    :root {
+      --bg: #f5f5f5;
+      --bg-dark: #0f1013;
+      --accent: #ffb300;
+      --text: #111111;
+      --muted: #777777;
+      --card: #ffffff;
+      --radius: 14px;
+      --shadow: 0 10px 30px rgba(0,0,0,0.08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin:0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+
+    /* NAVBAR */
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(16px);
+      background: rgba(15,16,19,0.96);
+      color: #fff;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:10px 24px;
+    }
+    .nav-left { display:flex; align-items:center; gap:10px; }
+    .logo-mark {
+      width:34px; height:34px; border-radius:50%;
+      background: radial-gradient(circle at 30% 20%, #fff 0, #ffdd80 20%, #ffb300 50%, #b77400 100%);
+      display:flex; align-items:center; justify-content:center;
+      font-weight:700; font-size:18px; color:#111;
+      box-shadow:0 6px 18px rgba(0,0,0,0.35);
+    }
+    .nav-title { font-weight:600; letter-spacing:0.03em; font-size:18px; }
+
+    .nav-links {
+      display:flex;
+      align-items:center;
+    }
+    .nav-links a {
+      color:#ddd;
+      text-decoration:none;
+      margin-left:18px;
+      font-size:14px;
+    }
+    .nav-links a:hover { color:var(--accent); }
+    .nav-cta {
+      background:var(--accent);
+      color:#111;
+      border:none;
+      padding:10px 18px;
+      border-radius:999px;
+      font-size:14px;
+      font-weight:600;
+      cursor:pointer;
+      box-shadow:0 8px 20px rgba(0,0,0,0.45);
+      margin-left:18px;
+      white-space:nowrap;
+    }
+
+    /* mobile nav toggle */
+    .nav-toggle {
+      display:none;
+      width:32px;
+      height:32px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.4);
+      background:transparent;
+      padding:0;
+      margin-left:12px;
+      cursor:pointer;
+      align-items:center;
+      justify-content:center;
+    }
+    .nav-toggle-lines {
+      width:18px;
+      height:2px;
+      background:#fff;
+      position:relative;
+    }
+    .nav-toggle-lines::before,
+    .nav-toggle-lines::after {
+      content:"";
+      position:absolute;
+      left:0;
+      width:18px;
+      height:2px;
+      background:#fff;
+    }
+    .nav-toggle-lines::before { top:-5px; }
+    .nav-toggle-lines::after { top:5px; }
+
+    /* GENERAL LAYOUT */
+    .section { padding:60px 20px; max-width:1120px; margin:auto; }
+    .section h2 { font-size:28px; margin-bottom:10px; }
+    .section-sub { color:var(--muted); margin-bottom:30px; font-size:15px; }
+
+    /* HERO */
+    .hero {
+      background:linear-gradient(135deg, #0f1013 0%, #1b1d24 60%, #101012 100%);
+      color:#fff;
+      padding:70px 20px 60px;
+    }
+    .hero-inner {
+      max-width:1120px;
+      margin:auto;
+      display:grid;
+      grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);
+      gap:40px;
+      align-items:center;
+    }
+    @media (max-width: 820px) {
+      .hero-inner { grid-template-columns:1fr; }
+    }
+    .hero-tag {
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      background:rgba(255,255,255,0.06);
+      padding:6px 12px;
+      border-radius:999px;
+      font-size:12px;
+      margin-bottom:16px;
+    }
+    .hero-tag-dot {
+      width:8px; height:8px; border-radius:50%;
+      background:#4ade80;
+      box-shadow:0 0 0 6px rgba(74,222,128,0.2);
+    }
+    .hero h1 { font-size:36px; margin:0 0 16px; }
+    .hero-lead { color:#c5c7d3; font-size:15px; margin-bottom:22px; }
+    .hero-badges { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:26px; }
+    .badge {
+      font-size:11px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.1);
+      color:#d6d8e3;
+    }
+    .hero-cta-row {
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      align-items:center;
+    }
+    .hero-primary {
+      background:var(--accent);
+      color:#111;
+      padding:12px 22px;
+      border-radius:999px;
+      border:none;
+      cursor:pointer;
+      font-weight:600;
+      box-shadow:0 10px 24px rgba(0,0,0,0.5);
+    }
+    .hero-secondary {
+      background:transparent;
+      border:1px solid rgba(255,255,255,0.3);
+      color:#fff;
+      padding:11px 20px;
+      border-radius:999px;
+      cursor:pointer;
+      font-size:14px;
+    }
+    .hero-meta { font-size:12px; color:#9ca3af; margin-top:8px; }
+
+    .hero-card {
+      background:radial-gradient(circle at top left, #23242d 0, #111320 55%, #050509 100%);
+      border-radius:var(--radius);
+      padding:22px 20px;
+      box-shadow:0 16px 40px rgba(0,0,0,0.6);
+      border:1px solid rgba(255,255,255,0.05);
+      color:#e5e7eb;
+    }
+    .hero-card-header {
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      margin-bottom:14px;
+      gap:8px;
+    }
+    .hero-car-tag {
+      font-size:11px;
+      padding:4px 10px;
+      border-radius:999px;
+      background:rgba(148,163,184,0.2);
+      white-space:nowrap;
+    }
+    .hero-price { font-weight:700; font-size:18px; }
+    .hero-grid {
+      display:grid;
+      grid-template-columns:repeat(2, minmax(0,1fr));
+      gap:10px;
+      font-size:12px;
+      margin-bottom:16px;
+    }
+    .hero-label { color:#9ca3af; font-size:11px; }
+    .hero-val { font-weight:500; }
+    .hero-timeline { font-size:11px; color:#9ca3af; margin-bottom:10px; }
+    .hero-pill-row { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+    .hero-pill {
+      font-size:10px;
+      padding:5px 9px;
+      border-radius:999px;
+      background:rgba(15,118,110,0.25);
+      border:1px solid rgba(45,212,191,0.3);
+      color:#a5f3fc;
+    }
+    .hero-indicator { font-size:11px; color:#4ade80; }
+
+    /* SERVICES / PACKAGES */
+    .cards-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(240px,1fr));
+      gap:20px;
+    }
+    .card {
+      background:var(--card);
+      border-radius:var(--radius);
+      padding:20px;
+      box-shadow:var(--shadow);
+    }
+    .card h3 { margin:0 0 6px; font-size:18px; }
+    .card-price { font-weight:700; margin-bottom:4px; }
+    .card-meta { font-size:13px; color:var(--muted); margin-bottom:10px; }
+    .card ul {
+      padding-left:18px;
+      margin:0 0 10px;
+      font-size:13px;
+      color:#444;
+    }
+    .card-cta {
+      display:inline-block;
+      margin-top:4px;
+      font-size:13px;
+      color:#111;
+      font-weight:600;
+      text-decoration:none;
+    }
+
+    /* ABOUT */
+    .split {
+      display:grid;
+      grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);
+      gap:32px;
+      align-items:flex-start;
+    }
+    @media (max-width: 880px) {
+      .split { grid-template-columns:1fr; }
+    }
+    .about-tag {
+      font-size:11px;
+      text-transform:uppercase;
+      color:var(--muted);
+      letter-spacing:0.12em;
+      margin-bottom:6px;
+    }
+    .about-p { font-size:14px; color:#444; line-height:1.6; }
+    .about-list { font-size:14px; color:#444; padding-left:18px; }
+
+    /* BOOKING FORM */
+    .booking-box {
+      background:var(--card);
+      border-radius:var(--radius);
+      padding:24px 22px;
+      box-shadow:var(--shadow);
+    }
+    .form-row {
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+      gap:14px;
+    }
+    label {
+      font-size:13px;
+      font-weight:500;
+      display:block;
+      margin-top:10px;
+    }
+    input, select, textarea {
+      width:100%;
+      padding:10px 11px;
+      margin-top:4px;
+      border-radius:8px;
+      border:1px solid #d1d5db;
+      font-size:13px;
+      font-family:inherit;
+    }
+    textarea { min-height:90px; resize:vertical; }
+    .btn-primary {
+      margin-top:16px;
+      background:var(--bg-dark);
+      color:#fff;
+      padding:12px 20px;
+      border-radius:999px;
+      border:none;
+      cursor:pointer;
+      font-weight:600;
+      width:100%;
+    }
+
+    /* TESTIMONIALS */
+    .quote-grid {
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+      gap:18px;
+    }
+    .quote {
+      background:#111827;
+      color:#e5e7eb;
+      border-radius:var(--radius);
+      padding:18px 18px 16px;
+      box-shadow:0 12px 30px rgba(15,23,42,0.7);
+      position:relative;
+      overflow:hidden;
+    }
+    .quote::before {
+      content:"\201C";
+      position:absolute;
+      font-size:70px;
+      color:rgba(55,65,81,0.3);
+      top:-22px;
+      left:6px;
+    }
+    .quote-name { margin-top:10px; font-size:13px; font-weight:600; }
+    .quote-meta { font-size:11px; color:#9ca3af; }
+
+    /* FAQ */
+    .faq-item {
+      background:var(--card);
+      border-radius:var(--radius);
+      padding:14px 16px;
+      box-shadow:var(--shadow);
+      margin-bottom:10px;
+    }
+    .faq-q { font-size:14px; font-weight:600; margin-bottom:4px; }
+    .faq-a { font-size:13px; color:#555; }
+
+    /* CONTACT */
+    .contact-grid {
+      display:grid;
+      grid-template-columns:minmax(0,1.05fr) minmax(0,0.95fr);
+      gap:26px;
+    }
+    @media (max-width: 860px) {
+      .contact-grid { grid-template-columns:1fr; }
+    }
+    .contact-card {
+      background:var(--card);
+      border-radius:var(--radius);
+      padding:20px;
+      box-shadow:var(--shadow);
+      font-size:14px;
+      color:#444;
+    }
+    .contact-row { margin-bottom:8px; }
+    .contact-label { font-weight:600; font-size:13px; }
+    .map-placeholder {
+      border-radius:var(--radius);
+      background:linear-gradient(135deg,#d1d5db,#9ca3af);
+      height:220px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:#111827;
+      font-size:14px;
+      font-weight:600;
+      box-shadow:var(--shadow);
+    }
+
+    /* FOOTER */
+    footer {
+      background:#020617;
+      color:#9ca3af;
+      padding:18px 20px;
+      font-size:12px;
+    }
+    .footer-inner {
+      max-width:1120px;
+      margin:auto;
+      display:flex;
+      flex-wrap:wrap;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+    }
+
+    /* WHATSAPP FLOAT */
+    .wa-float {
+      position:fixed;
+      right:18px;
+      bottom:18px;
+      z-index:60;
+    }
+    .wa-btn {
+      background:#22c55e;
+      color:#fff;
+      border-radius:999px;
+      padding:10px 14px;
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-size:13px;
+      text-decoration:none;
+      box-shadow:0 10px 24px rgba(22,163,74,0.6);
+    }
+    .wa-dot {
+      width:9px;
+      height:9px;
+      border-radius:50%;
+      background:#bbf7d0;
+    }
+
+    /* MOBILE TWEAKS */
+    @media (max-width: 768px) {
+      .nav {
+        padding:8px 14px;
+      }
+      .nav-title {
+        font-size:16px;
+      }
+      .nav-links {
+        position:fixed;
+        top:56px;
+        right:0;
+        left:0;
+        background:#0f1013;
+        padding:10px 18px 16px;
+        flex-direction:column;
+        gap:8px;
+        display:none;
+      }
+      .nav-links a {
+        margin-left:0;
+        padding:6px 0;
+        font-size:15px;
+      }
+      .nav-cta {
+        width:100%;
+        text-align:center;
+        margin-left:0;
+        margin-top:4px;
+      }
+      .nav-links.open {
+        display:flex;
+      }
+      .nav-toggle {
+        display:flex;
+      }
+      .hero {
+        padding:56px 16px 40px;
+      }
+      .hero h1 {
+        font-size:28px;
+      }
+      .section {
+        padding:40px 16px;
+      }
+      .hero-card {
+        margin-top:10px;
+      }
+      .wa-float {
+        right:12px;
+        bottom:12px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav class="nav">
+    <div class="nav-left">
+      <div class="logo-mark">D</div>
+      <div class="nav-title">Demo Driving School</div>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <div class="nav-links" id="navLinks">
+        <a href="#home">Home</a>
+        <a href="#about">About</a>
+        <a href="#packages">Lessons</a>
+        <a href="#booking">Book Online</a>
+        <a href="#testimonials">Reviews</a>
+        <a href="#contact">Contact</a>
+        <button class="nav-cta" onclick="document.getElementById('booking').scrollIntoView({behavior:'smooth'});">Book a Lesson</button>
+      </div>
+      <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+        <div class="nav-toggle-lines"></div>
+      </button>
+    </div>
+  </nav>
+
+  <!-- HERO / HOME -->
+  <header id="home" class="hero">
+    <div class="hero-inner">
+      <div>
+        <div class="hero-tag"><span class="hero-tag-dot"></span> DVSA-Style Professional Training (Demo Content)</div>
+        <h1>Confident Driving Starts Here.</h1>
+        <p class="hero-lead">Manual & automatic driving lessons tailored for beginners, nervous drivers and test-ready learners. Local pick-up, flexible hours and patient, friendly instruction.</p>
+        <div class="hero-badges">
+          <div class="badge">Beginner & Refresher Lessons</div>
+          <div class="badge">Test Route Practice</div>
+          <div class="badge">Flexible Evening & Weekend Slots</div>
+        </div>
+        <div class="hero-cta-row">
+          <button class="hero-primary" onclick="document.getElementById('booking').scrollIntoView({behavior:'smooth'});">Book Your First Lesson</button>
+          <button class="hero-secondary" onclick="document.getElementById('packages').scrollIntoView({behavior:'smooth'});">View Lesson Packages</button>
+        </div>
+        <div class="hero-meta">No obligation – the form sends a booking request only. Payment can be arranged after confirmation.</div>
+      </div>
+
+      <aside class="hero-card">
+        <div class="hero-card-header">
+          <div>
+            <div class="hero-label">Featured Demo Package</div>
+            <div class="hero-price">10 Hour Starter Pack</div>
+          </div>
+          <div class="hero-car-tag">Manual / Automatic</div>
+        </div>
+        <div class="hero-grid">
+          <div>
+            <div class="hero-label">Ideal for</div>
+            <div class="hero-val">Complete beginners</div>
+          </div>
+          <div>
+            <div class="hero-label">From</div>
+            <div class="hero-val">£290 (demo)</div>
+          </div>
+          <div>
+            <div class="hero-label">Lesson length</div>
+            <div class="hero-val">60 minutes</div>
+          </div>
+          <div>
+            <div class="hero-label">Area</div>
+            <div class="hero-val">Your local area</div>
+          </div>
+        </div>
+        <div class="hero-timeline">Typical journey: confidence building → junctions & roundabouts → manoeuvres → mock test preparation.</div>
+        <div class="hero-pill-row">
+          <div class="hero-pill">One-to-one tuition</div>
+          <div class="hero-pill">Calm & patient teaching style</div>
+          <div class="hero-pill">Pick-up from home/uni/work</div>
+        </div>
+        <div class="hero-indicator">This card is just a visual demo for your future package highlight.</div>
+      </aside>
+    </div>
+  </header>
+
+  <!-- ABOUT PAGE (DEMO) -->
+  <section id="about" class="section">
+    <div class="split">
+      <div>
+        <div class="about-tag">About the Instructor (Demo Copy)</div>
+        <h2>Friendly, Patient and Focused on Real-World Driving.</h2>
+        <p class="about-p">This section will introduce the real instructor – their experience, qualifications and teaching approach. For the demo, we’re showing the structure: a short story, what makes the trainer different, and why learners feel comfortable in the car.</p>
+        <p class="about-p">You can highlight things like DVSA-approved instructor status, pass rates, local test centres covered and any specialist experience (nervous drivers, international licence holders, etc.).</p>
+      </div>
+      <div class="card">
+        <h3>Key Highlights (Example)</h3>
+        <ul class="about-list">
+          <li>DVSA-style qualified instructor (placeholder)</li>
+          <li>Years of local driving experience around your city</li>
+          <li>Flexible lesson times around work, college and school runs</li>
+          <li>Support with theory test preparation and hazard perception</li>
+          <li>Clear progress tracking from first drive to test day</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- PACKAGES / SERVICES PAGE (DEMO) -->
+  <section id="packages" class="section">
+    <h2>Lesson Packages & Pricing (Demo)</h2>
+    <p class="section-sub">These packages are example placeholders. We’ll swap in your real lesson types, prices and offers during setup.</p>
+    <div class="cards-grid">
+      <div class="card">
+        <h3>Beginner Taster – 2 Hours</h3>
+        <div class="card-price">£70 (demo)</div>
+        <div class="card-meta">Perfect if you’ve never driven before and want to experience the car in a quiet area.</div>
+        <ul>
+          <li>Manual or automatic car</li>
+          <li>Pick-up from home or campus</li>
+          <li>Basic controls & moving off</li>
+        </ul>
+        <a href="#booking" class="card-cta">Book this package →</a>
+      </div>
+      <div class="card">
+        <h3>10 Hour Starter Pack</h3>
+        <div class="card-price">£290 (demo)</div>
+        <div class="card-meta">Ideal for learners starting from scratch and wanting consistent weekly lessons.</div>
+        <ul>
+          <li>Structured lesson plan</li>
+          <li>City & suburban routes</li>
+          <li>Progress updates every session</li>
+        </ul>
+        <a href="#booking" class="card-cta">Book this package →</a>
+      </div>
+      <div class="card">
+        <h3>Test Booster – 5 Hours</h3>
+        <div class="card-price">£160 (demo)</div>
+        <div class="card-meta">For learners with an upcoming test who want to sharpen their skills and practise routes.</div>
+        <ul>
+          <li>Focus on common test faults</li>
+          <li>Roundabouts, parking & manoeuvres</li>
+          <li>Mock test with feedback</li>
+        </ul>
+        <a href="#booking" class="card-cta">Book this package →</a>
+      </div>
+      <div class="card">
+        <h3>Motorway & Confidence Session</h3>
+        <div class="card-price">£50/hour (demo)</div>
+        <div class="card-meta">Great for new full licence holders or nervous drivers looking to gain extra confidence.</div>
+        <ul>
+          <li>Motorway & dual carriageways</li>
+          <li>Night driving or bad-weather practice</li>
+          <li>Fully customised to your needs</li>
+        </ul>
+        <a href="#booking" class="card-cta">Enquire about availability →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- BOOK ONLINE PAGE (DEMO) -->
+  <section id="booking" class="section">
+    <h2>Book Online (Demo Form)</h2>
+    <p class="section-sub">This is a demo booking request form. On the live site, it will send all details to your email inbox (or to a booking tool) so you can confirm lessons directly with the learner.</p>
+
+    <div class="booking-box">
+      <form onsubmit="event.preventDefault(); alert('Demo only: this would send a booking request to your email.');">
+        <div class="form-row">
+          <div>
+            <label>Full Name</label>
+            <input type="text" placeholder="Your name" required />
+          </div>
+          <div>
+            <label>Mobile Number</label>
+            <input type="tel" placeholder="07xxxxxxxxx" required />
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div>
+            <label>Email Address</label>
+            <input type="email" placeholder="you@example.com" />
+          </div>
+          <div>
+            <label>Preferred Contact Method</label>
+            <select>
+              <option>WhatsApp</option>
+              <option>Phone Call</option>
+              <option>Email</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div>
+            <label>Choose Package</label>
+            <select required>
+              <option>Beginner Taster – 2 Hours</option>
+              <option>10 Hour Starter Pack</option>
+              <option>Test Booster – 5 Hours</option>
+              <option>Motorway & Confidence Session</option>
+              <option>Single 1-Hour Lesson</option>
+            </select>
+          </div>
+          <div>
+            <label>Preferred Lesson Type</label>
+            <select>
+              <option>Manual</option>
+              <option>Automatic</option>
+              <option>Either / Not sure yet</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div>
+            <label>Preferred Date</label>
+            <input type="date" />
+          </div>
+          <div>
+            <label>Preferred Time</label>
+            <input type="time" />
+          </div>
+        </div>
+
+        <label>Pickup Location / Postcode</label>
+        <input type="text" placeholder="e.g. M40 2FL or ‘Near Salford Shopping Centre’" />
+
+        <label>Notes (current experience, test date, anything we should know)</label>
+        <textarea placeholder="Tell us if you have a test booked, how many hours you’ve already done, or any worries you have about driving."></textarea>
+
+        <button type="submit" class="btn-primary">Submit Booking Request (Demo)</button>
+      </form>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS PAGE (DEMO) -->
+  <section id="testimonials" class="section">
+    <h2>Learner Reviews (Demo)</h2>
+    <p class="section-sub">This section will show real reviews from your pupils or screenshots from Google, Facebook or WhatsApp feedback.</p>
+
+    <div class="quote-grid">
+      <div class="quote">
+        <div>"Honestly the best instructor I could have asked for. Calm, clear and made every lesson feel manageable instead of scary. Passed first time!"</div>
+        <div class="quote-name">Demo Pupil A</div>
+        <div class="quote-meta">Manual lessons – city centre routes</div>
+      </div>
+      <div class="quote">
+        <div>"I was a very nervous driver but the lessons were always patient and encouraging. We practised my actual test routes and that really helped."</div>
+        <div class="quote-name">Demo Pupil B</div>
+        <div class="quote-meta">Refresher & test booster package</div>
+      </div>
+      <div class="quote">
+        <div>"Great communication, flexible with evenings and weekends. I liked the clear feedback after each session so I knew what to focus on next."</div>
+        <div class="quote-name">Demo Pupil C</div>
+        <div class="quote-meta">Automatic lessons – after work slots</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ PAGE (DEMO) -->
+  <section class="section">
+    <h2>Common Questions (Demo)</h2>
+    <p class="section-sub">These are example FAQs to show how we’ll structure answers for learners. We’ll replace them with your real policies.</p>
+
+    <div class="faq-item">
+      <div class="faq-q">How long are your driving lessons?</div>
+      <div class="faq-a">Most lessons are 60 minutes as standard, but 90-minute and 2-hour blocks can be arranged. We’ll confirm the exact duration when we set up your real packages.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">What is your cancellation policy?</div>
+      <div class="faq-a">A typical cancellation policy is 24–48 hours notice to avoid being charged. We’ll include your actual policy wording here so pupils know what to expect.</div>
+    </div>
+    <div class="faq-item">
+      <div class="faq-q">Do you pick up from home, college or work?</div>
+      <div class="faq-a">Most instructors offer flexible pick-up within their area (home, uni or workplace). We’ll list the specific areas and postcodes you cover once we confirm them with you.</div>
+    </div>
+  </section>
+
+  <!-- CONTACT PAGE (DEMO) -->
+  <section id="contact" class="section">
+    <h2>Contact & Area Covered (Demo)</h2>
+    <p class="section-sub">On the live site, this section will show your real phone number, WhatsApp, email and an embedded Google Map of your main teaching area.</p>
+
+    <div class="contact-grid">
+      <div class="contact-card">
+        <div class="contact-row">
+          <span class="contact-label">Phone:</span> 07xxx xxx xxx (demo)
+        </div>
+        <div class="contact-row">
+          <span class="contact-label">WhatsApp:</span> Click the green button in the corner (demo)
+        </div>
+        <div class="contact-row">
+          <span class="contact-label">Email:</span> info@yourdrivingschool.co.uk (demo)
+        </div>
+        <div class="contact-row">
+          <span class="contact-label">Area covered:</span> Example: Salford, Manchester city centre, surrounding postcodes
+        </div>
+        <div class="contact-row">
+          <span class="contact-label">Lesson times:</span> Mon–Fri evenings • Sat–Sun daytime (to be customised)
+        </div>
+      </div>
+      <div class="map-placeholder">
+        Map Preview Area – Google Map will go here on live site
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER / MINI TERMS (DEMO) -->
+  <footer>
+    <div class="footer-inner">
+      <div>© 2025 Demo Driving School Website Prototype – For demonstration only, content to be replaced with real instructor details.</div>
+      <div>Terms & cancellation policy text can be linked here in the final build.</div>
+    </div>
+  </footer>
+
+  <!-- WHATSAPP FLOAT DEMO -->
+  <div class="wa-float">
+    <a href="#" class="wa-btn" onclick="alert('Demo only: this would open WhatsApp chat with the instructor.'); return false;">
+      <span class="wa-dot"></span>
+      WhatsApp Demo
+    </a>
+  </div>
+
+  <script>
+    // simple mobile nav toggle
+    const navToggle = document.getElementById('navToggle');
+    const navLinks = document.getElementById('navLinks');
+
+    if (navToggle && navLinks) {
+      navToggle.addEventListener('click', () => {
+        navLinks.classList.toggle('open');
+      });
+
+      // close menu when clicking a link (mobile)
+      navLinks.querySelectorAll('a').forEach(a => {
+        a.addEventListener('click', () => {
+          navLinks.classList.remove('open');
+        });
+      });
+    }
+  </script>
+
+</body>
+</html>
