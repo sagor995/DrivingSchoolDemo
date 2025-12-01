@@ -747,10 +747,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
             <label>Preferred Date</label>
             <input type="date" name="preferred_date" required />
           </div>
-          <div>
-            <label>Preferred Time</label>
-            <input type="time" name="preferred_time" required />
-          </div>
+          
         </div>
 
         <label>Pickup Location / Postcode</label>
