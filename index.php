@@ -1,12 +1,85 @@
+<?php
+require_once 'config/db_config.php';
+
+$db = Database::getInstance()->getConnection();
+
+// Get site settings
+$settings_query = $db->query("SELECT setting_key, setting_value FROM site_settings");
+$settings = [];
+while ($row = $settings_query->fetch()) {
+    $settings[$row['setting_key']] = $row['setting_value'];
+}
+
+// Get active packages
+$packages = $db->query("SELECT * FROM packages WHERE is_active = TRUE ORDER BY display_order ASC, id ASC")->fetchAll();
+
+// Get featured package
+$featured_package = $db->query("SELECT * FROM packages WHERE is_featured = TRUE AND is_active = TRUE LIMIT 1")->fetch();
+
+// Get key highlights
+$highlights = $db->query("SELECT * FROM key_highlights WHERE is_active = TRUE ORDER BY display_order ASC")->fetchAll();
+
+// Get hero badges
+$hero_badges = $db->query("SELECT * FROM hero_badges WHERE is_active = TRUE ORDER BY display_order ASC")->fetchAll();
+
+// Get FAQs
+$faqs = $db->query("SELECT * FROM faqs WHERE is_active = TRUE ORDER BY display_order ASC")->fetchAll();
+
+// Get approved testimonials
+$testimonials = $db->query("SELECT * FROM testimonials WHERE is_approved = TRUE ORDER BY display_order ASC LIMIT 6")->fetchAll();
+
+// Handle booking form submission
+$booking_message = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
+    $full_name = sanitize_input($_POST['full_name']);
+    $mobile_number = sanitize_input($_POST['mobile_number']);
+    $email = sanitize_input($_POST['email']);
+    $contact_method = sanitize_input($_POST['contact_method']);
+    $package_id = intval($_POST['package_id']);
+    $lesson_type = sanitize_input($_POST['lesson_type']);
+    $preferred_date = $_POST['preferred_date'];
+    $preferred_time = $_POST['preferred_time'];
+    $pickup_location = sanitize_input($_POST['pickup_location']);
+    $notes = sanitize_input($_POST['notes']);
+    
+    try {
+        $stmt = $db->prepare("INSERT INTO bookings (full_name, mobile_number, email, contact_method, package_id, lesson_type, preferred_date, preferred_time, pickup_location, notes, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')");
+        
+        if ($stmt->execute([$full_name, $mobile_number, $email, $contact_method, $package_id, $lesson_type, $preferred_date, $preferred_time, $pickup_location, $notes])) {
+            // Send email notification to admin
+            $to = $settings['notification_email'] ?? 'anabdrivingschool@gmail.com';
+            $subject = "New Booking Request - " . $full_name;
+            $message = "New booking request received:\n\n";
+            $message .= "Name: $full_name\n";
+            $message .= "Phone: $mobile_number\n";
+            $message .= "Email: $email\n";
+            $message .= "Preferred Date: $preferred_date\n";
+            $message .= "Preferred Time: $preferred_time\n";
+            $message .= "Lesson Type: $lesson_type\n";
+            $message .= "Pickup Location: $pickup_location\n";
+            $message .= "Notes: $notes\n";
+            
+            $headers = "From: " . ($settings['email'] ?? 'anabdrivingschool@gmail.com');
+            
+            @mail($to, $subject, $message, $headers);
+            
+            $booking_message = '<div class="alert alert-success" style="margin: 20px; padding: 14px; background: #d1fae5; color: #065f46; border-radius: 8px;">✅ Booking request submitted successfully! We will contact you shortly.</div>';
+        }
+    } catch (PDOException $e) {
+        $booking_message = '<div class="alert alert-error" style="margin: 20px; padding: 14px; background: #fee2e2; color: #991b1b; border-radius: 8px;">❌ There was an error submitting your booking. Please try again or call us directly.</div>';
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Driving School – Demo Prototype</title>
+  <title><?php echo htmlspecialchars($settings['business_name'] ?? 'Anab Driving School'); ?></title>
   <style>
+    /* Keep all your existing CSS from the original file */
     :root {
-      --bg: #f5f5f5;
+      --bg: #dadfe6;
       --bg-dark: #0f1013;
       --accent: #ffb300;
       --text: #111111;
@@ -38,6 +111,11 @@
       padding:10px 24px;
     }
     .nav-left { display:flex; align-items:center; gap:10px; }
+    .logo-img {
+      height: 80px;
+      width: auto;
+      object-fit: contain;
+    }
     .logo-mark {
       width:34px; height:34px; border-radius:50%;
       background: radial-gradient(circle at 30% 20%, #fff 0, #ffdd80 20%, #ffb300 50%, #b77400 100%);
@@ -484,8 +562,12 @@
   <!-- NAVBAR -->
   <nav class="nav">
     <div class="nav-left">
-      <div class="logo-mark">D</div>
-      <div class="nav-title">Demo Driving School</div>
+      <?php if (!empty($settings['logo_path']) && file_exists($settings['logo_path'])): ?>
+        <img src="<?php echo htmlspecialchars($settings['logo_path']); ?>" alt="Logo" class="logo-img">
+      <?php else: ?>
+        <div class="logo-mark">A</div>
+      <?php endif; ?>
+      <div class="nav-title"><?php echo htmlspecialchars($settings['business_name'] ?? 'Anab Driving School'); ?></div>
     </div>
     <div style="display:flex; align-items:center; gap:8px;">
       <div class="nav-links" id="navLinks">
@@ -507,14 +589,19 @@
   <header id="home" class="hero">
     <div class="hero-inner">
       <div>
-        <div class="hero-tag"><span class="hero-tag-dot"></span> DVSA-Style Professional Training (Demo Content)</div>
-        <h1>Confident Driving Starts Here.</h1>
-        <p class="hero-lead">Manual & automatic driving lessons tailored for beginners, nervous drivers and test-ready learners. Local pick-up, flexible hours and patient, friendly instruction.</p>
-        <div class="hero-badges">
-          <div class="badge">Beginner & Refresher Lessons</div>
-          <div class="badge">Test Route Practice</div>
-          <div class="badge">Flexible Evening & Weekend Slots</div>
+        <div class="hero-tag">
+          <span class="hero-tag-dot"></span> 
+          <?php echo htmlspecialchars($settings['hero_tag'] ?? 'DVSA-Style Professional Training'); ?>
         </div>
+        <h1><?php echo htmlspecialchars($settings['hero_title'] ?? 'Confident Driving Starts Here.'); ?></h1>
+        <p class="hero-lead"><?php echo htmlspecialchars($settings['hero_subtitle'] ?? ''); ?></p>
+        
+        <div class="hero-badges">
+          <?php foreach ($hero_badges as $badge): ?>
+            <div class="badge"><?php echo htmlspecialchars($badge['badge_text']); ?></div>
+          <?php endforeach; ?>
+        </div>
+        
         <div class="hero-cta-row">
           <button class="hero-primary" onclick="document.getElementById('booking').scrollIntoView({behavior:'smooth'});">Book Your First Lesson</button>
           <button class="hero-secondary" onclick="document.getElementById('packages').scrollIntoView({behavior:'smooth'});">View Lesson Packages</button>
@@ -522,143 +609,110 @@
         <div class="hero-meta">No obligation – the form sends a booking request only. Payment can be arranged after confirmation.</div>
       </div>
 
-      <aside class="hero-card">
-        <div class="hero-card-header">
-          <div>
-            <div class="hero-label">Featured Demo Package</div>
-            <div class="hero-price">10 Hour Starter Pack</div>
+      <?php if ($featured_package): ?>
+        <aside class="hero-card">
+          <div class="hero-card-header">
+            <div>
+              <div class="hero-label">Featured Package</div>
+              <div class="hero-price"><?php echo htmlspecialchars($featured_package['package_name']); ?></div>
+            </div>
+            <div class="hero-car-tag"><?php echo $featured_package['car_type']; ?></div>
           </div>
-          <div class="hero-car-tag">Manual / Automatic</div>
-        </div>
-        <div class="hero-grid">
-          <div>
-            <div class="hero-label">Ideal for</div>
-            <div class="hero-val">Complete beginners</div>
+          <div class="hero-grid">
+            <div>
+              <div class="hero-label">Duration</div>
+              <div class="hero-val"><?php echo htmlspecialchars($featured_package['duration']); ?></div>
+            </div>
+            <div>
+              <div class="hero-label">From</div>
+              <div class="hero-val">£<?php echo number_format($featured_package['price'], 2); ?></div>
+            </div>
           </div>
-          <div>
-            <div class="hero-label">From</div>
-            <div class="hero-val">£290 (demo)</div>
+          <div class="hero-timeline"><?php echo htmlspecialchars($featured_package['description']); ?></div>
+          <div class="hero-pill-row">
+            <?php 
+            $features = explode('|', $featured_package['features']);
+            foreach ($features as $feature): 
+            ?>
+              <div class="hero-pill"><?php echo htmlspecialchars(trim($feature)); ?></div>
+            <?php endforeach; ?>
           </div>
-          <div>
-            <div class="hero-label">Lesson length</div>
-            <div class="hero-val">60 minutes</div>
-          </div>
-          <div>
-            <div class="hero-label">Area</div>
-            <div class="hero-val">Your local area</div>
-          </div>
-        </div>
-        <div class="hero-timeline">Typical journey: confidence building → junctions & roundabouts → manoeuvres → mock test preparation.</div>
-        <div class="hero-pill-row">
-          <div class="hero-pill">One-to-one tuition</div>
-          <div class="hero-pill">Calm & patient teaching style</div>
-          <div class="hero-pill">Pick-up from home/uni/work</div>
-        </div>
-        <div class="hero-indicator">This card is just a visual demo for your future package highlight.</div>
-      </aside>
+        </aside>
+      <?php endif; ?>
     </div>
   </header>
 
-  <!-- ABOUT PAGE (DEMO) -->
+  <!-- ABOUT PAGE -->
   <section id="about" class="section">
     <div class="split">
       <div>
-        <div class="about-tag">About the Instructor (Demo Copy)</div>
-        <h2>Friendly, Patient and Focused on Real-World Driving.</h2>
-        <p class="about-p">This section will introduce the real instructor – their experience, qualifications and teaching approach. For the demo, we’re showing the structure: a short story, what makes the trainer different, and why learners feel comfortable in the car.</p>
-        <p class="about-p">You can highlight things like DVSA-approved instructor status, pass rates, local test centres covered and any specialist experience (nervous drivers, international licence holders, etc.).</p>
+        <div class="about-tag">About the Instructor</div>
+        <h2><?php echo htmlspecialchars($settings['about_title'] ?? 'Friendly, Patient and Focused on Real-World Driving.'); ?></h2>
+        <p class="about-p"><?php echo nl2br(htmlspecialchars($settings['about_description'] ?? '')); ?></p>
       </div>
       <div class="card">
-        <h3>Key Highlights (Example)</h3>
+        <h3>Key Highlights</h3>
         <ul class="about-list">
-          <li>DVSA-style qualified instructor (placeholder)</li>
-          <li>Years of local driving experience around your city</li>
-          <li>Flexible lesson times around work, college and school runs</li>
-          <li>Support with theory test preparation and hazard perception</li>
-          <li>Clear progress tracking from first drive to test day</li>
+          <?php foreach ($highlights as $highlight): ?>
+            <li><?php echo htmlspecialchars($highlight['highlight_text']); ?></li>
+          <?php endforeach; ?>
         </ul>
       </div>
     </div>
   </section>
 
-  <!-- PACKAGES / SERVICES PAGE (DEMO) -->
+  <!-- PACKAGES / SERVICES PAGE -->
   <section id="packages" class="section">
-    <h2>Lesson Packages & Pricing (Demo)</h2>
-    <p class="section-sub">These packages are example placeholders. We’ll swap in your real lesson types, prices and offers during setup.</p>
+    <h2>Lesson Packages & Pricing</h2>
+    <p class="section-sub">Choose the package that's right for you. All packages include pick-up and patient, professional instruction.</p>
     <div class="cards-grid">
-      <div class="card">
-        <h3>Beginner Taster – 2 Hours</h3>
-        <div class="card-price">£70 (demo)</div>
-        <div class="card-meta">Perfect if you’ve never driven before and want to experience the car in a quiet area.</div>
-        <ul>
-          <li>Manual or automatic car</li>
-          <li>Pick-up from home or campus</li>
-          <li>Basic controls & moving off</li>
-        </ul>
-        <a href="#booking" class="card-cta">Book this package →</a>
-      </div>
-      <div class="card">
-        <h3>10 Hour Starter Pack</h3>
-        <div class="card-price">£290 (demo)</div>
-        <div class="card-meta">Ideal for learners starting from scratch and wanting consistent weekly lessons.</div>
-        <ul>
-          <li>Structured lesson plan</li>
-          <li>City & suburban routes</li>
-          <li>Progress updates every session</li>
-        </ul>
-        <a href="#booking" class="card-cta">Book this package →</a>
-      </div>
-      <div class="card">
-        <h3>Test Booster – 5 Hours</h3>
-        <div class="card-price">£160 (demo)</div>
-        <div class="card-meta">For learners with an upcoming test who want to sharpen their skills and practise routes.</div>
-        <ul>
-          <li>Focus on common test faults</li>
-          <li>Roundabouts, parking & manoeuvres</li>
-          <li>Mock test with feedback</li>
-        </ul>
-        <a href="#booking" class="card-cta">Book this package →</a>
-      </div>
-      <div class="card">
-        <h3>Motorway & Confidence Session</h3>
-        <div class="card-price">£50/hour (demo)</div>
-        <div class="card-meta">Great for new full licence holders or nervous drivers looking to gain extra confidence.</div>
-        <ul>
-          <li>Motorway & dual carriageways</li>
-          <li>Night driving or bad-weather practice</li>
-          <li>Fully customised to your needs</li>
-        </ul>
-        <a href="#booking" class="card-cta">Enquire about availability →</a>
-      </div>
+      <?php foreach ($packages as $package): ?>
+        <div class="card">
+          <h3><?php echo htmlspecialchars($package['package_name']); ?></h3>
+          <div class="card-price">£<?php echo number_format($package['price'], 2); ?></div>
+          <div class="card-meta"><?php echo htmlspecialchars($package['description']); ?></div>
+          <ul>
+            <?php 
+            $features = explode('|', $package['features']);
+            foreach ($features as $feature): 
+            ?>
+              <li><?php echo htmlspecialchars(trim($feature)); ?></li>
+            <?php endforeach; ?>
+          </ul>
+          <a href="#booking" class="card-cta">Book this package →</a>
+        </div>
+      <?php endforeach; ?>
     </div>
   </section>
 
-  <!-- BOOK ONLINE PAGE (DEMO) -->
+  <!-- BOOK ONLINE PAGE -->
   <section id="booking" class="section">
-    <h2>Book Online (Demo Form)</h2>
-    <p class="section-sub">This is a demo booking request form. On the live site, it will send all details to your email inbox (or to a booking tool) so you can confirm lessons directly with the learner.</p>
+    <h2>Book Online</h2>
+    <p class="section-sub">Fill out the form below to request a booking. We'll confirm your lesson details shortly.</p>
+
+    <?php echo $booking_message; ?>
 
     <div class="booking-box">
-      <form onsubmit="event.preventDefault(); alert('Demo only: this would send a booking request to your email.');">
+      <form method="POST" action="">
         <div class="form-row">
           <div>
-            <label>Full Name</label>
-            <input type="text" placeholder="Your name" required />
+            <label>Full Name *</label>
+            <input type="text" name="full_name" required />
           </div>
           <div>
-            <label>Mobile Number</label>
-            <input type="tel" placeholder="07xxxxxxxxx" required />
+            <label>Mobile Number *</label>
+            <input type="tel" name="mobile_number" required />
           </div>
         </div>
 
         <div class="form-row">
           <div>
             <label>Email Address</label>
-            <input type="email" placeholder="you@example.com" />
+            <input type="email" name="email" />
           </div>
           <div>
             <label>Preferred Contact Method</label>
-            <select>
+            <select name="contact_method">
               <option>WhatsApp</option>
               <option>Phone Call</option>
               <option>Email</option>
@@ -668,21 +722,22 @@
 
         <div class="form-row">
           <div>
-            <label>Choose Package</label>
-            <select required>
-              <option>Beginner Taster – 2 Hours</option>
-              <option>10 Hour Starter Pack</option>
-              <option>Test Booster – 5 Hours</option>
-              <option>Motorway & Confidence Session</option>
-              <option>Single 1-Hour Lesson</option>
+            <label>Choose Package *</label>
+            <select name="package_id" required>
+              <option value="">Select a package...</option>
+              <?php foreach ($packages as $pkg): ?>
+                <option value="<?php echo $pkg['id']; ?>">
+                  <?php echo htmlspecialchars($pkg['package_name']); ?> - £<?php echo number_format($pkg['price'], 2); ?>
+                </option>
+              <?php endforeach; ?>
             </select>
           </div>
           <div>
             <label>Preferred Lesson Type</label>
-            <select>
+            <select name="lesson_type">
               <option>Manual</option>
               <option>Automatic</option>
-              <option>Either / Not sure yet</option>
+              <option>Either</option>
             </select>
           </div>
         </div>
@@ -690,115 +745,114 @@
         <div class="form-row">
           <div>
             <label>Preferred Date</label>
-            <input type="date" />
+            <input type="date" name="preferred_date" required />
           </div>
           <div>
             <label>Preferred Time</label>
-            <input type="time" />
+            <input type="time" name="preferred_time" required />
           </div>
         </div>
 
         <label>Pickup Location / Postcode</label>
-        <input type="text" placeholder="e.g. M40 2FL or ‘Near Salford Shopping Centre’" />
+        <input type="text" name="pickup_location" placeholder="e.g. BL1 2AB or 'Near Bolton Town Centre'" />
 
         <label>Notes (current experience, test date, anything we should know)</label>
-        <textarea placeholder="Tell us if you have a test booked, how many hours you’ve already done, or any worries you have about driving."></textarea>
+        <textarea name="notes" placeholder="Tell us about your driving experience, if you have a test booked, or any concerns..."></textarea>
 
-        <button type="submit" class="btn-primary">Submit Booking Request (Demo)</button>
+        <button type="submit" name="submit_booking" class="btn-primary">Submit Booking Request</button>
       </form>
     </div>
   </section>
 
-  <!-- TESTIMONIALS PAGE (DEMO) -->
-  <section id="testimonials" class="section">
-    <h2>Learner Reviews (Demo)</h2>
-    <p class="section-sub">This section will show real reviews from your pupils or screenshots from Google, Facebook or WhatsApp feedback.</p>
+  <!-- TESTIMONIALS PAGE -->
+  <?php if (count($testimonials) > 0): ?>
+    <section id="testimonials" class="section">
+      <h2>Learner Reviews</h2>
+      <p class="section-sub">See what our students have to say about their experience.</p>
 
-    <div class="quote-grid">
-      <div class="quote">
-        <div>"Honestly the best instructor I could have asked for. Calm, clear and made every lesson feel manageable instead of scary. Passed first time!"</div>
-        <div class="quote-name">Demo Pupil A</div>
-        <div class="quote-meta">Manual lessons – city centre routes</div>
+      <div class="quote-grid">
+        <?php foreach ($testimonials as $testimonial): ?>
+          <div class="quote">
+            <div><?php echo htmlspecialchars($testimonial['review_text']); ?></div>
+            <div class="quote-name"><?php echo htmlspecialchars($testimonial['student_name']); ?></div>
+            <div class="quote-meta"><?php echo htmlspecialchars($testimonial['lesson_type']); ?></div>
+          </div>
+        <?php endforeach; ?>
       </div>
-      <div class="quote">
-        <div>"I was a very nervous driver but the lessons were always patient and encouraging. We practised my actual test routes and that really helped."</div>
-        <div class="quote-name">Demo Pupil B</div>
-        <div class="quote-meta">Refresher & test booster package</div>
-      </div>
-      <div class="quote">
-        <div>"Great communication, flexible with evenings and weekends. I liked the clear feedback after each session so I knew what to focus on next."</div>
-        <div class="quote-name">Demo Pupil C</div>
-        <div class="quote-meta">Automatic lessons – after work slots</div>
-      </div>
-    </div>
-  </section>
+    </section>
+  <?php endif; ?>
 
-  <!-- FAQ PAGE (DEMO) -->
-  <section class="section">
-    <h2>Common Questions (Demo)</h2>
-    <p class="section-sub">These are example FAQs to show how we’ll structure answers for learners. We’ll replace them with your real policies.</p>
+  <!-- FAQ PAGE -->
+  <?php if (count($faqs) > 0): ?>
+    <section class="section">
+      <h2>Common Questions</h2>
+      <p class="section-sub">Find answers to frequently asked questions about our lessons.</p>
 
-    <div class="faq-item">
-      <div class="faq-q">How long are your driving lessons?</div>
-      <div class="faq-a">Most lessons are 60 minutes as standard, but 90-minute and 2-hour blocks can be arranged. We’ll confirm the exact duration when we set up your real packages.</div>
-    </div>
-    <div class="faq-item">
-      <div class="faq-q">What is your cancellation policy?</div>
-      <div class="faq-a">A typical cancellation policy is 24–48 hours notice to avoid being charged. We’ll include your actual policy wording here so pupils know what to expect.</div>
-    </div>
-    <div class="faq-item">
-      <div class="faq-q">Do you pick up from home, college or work?</div>
-      <div class="faq-a">Most instructors offer flexible pick-up within their area (home, uni or workplace). We’ll list the specific areas and postcodes you cover once we confirm them with you.</div>
-    </div>
-  </section>
+      <?php foreach ($faqs as $faq): ?>
+        <div class="faq-item">
+          <div class="faq-q"><?php echo htmlspecialchars($faq['question']); ?></div>
+          <div class="faq-a"><?php echo htmlspecialchars($faq['answer']); ?></div>
+        </div>
+      <?php endforeach; ?>
+    </section>
+  <?php endif; ?>
 
-  <!-- CONTACT PAGE (DEMO) -->
+  <!-- CONTACT PAGE -->
   <section id="contact" class="section">
-    <h2>Contact & Area Covered (Demo)</h2>
-    <p class="section-sub">On the live site, this section will show your real phone number, WhatsApp, email and an embedded Google Map of your main teaching area.</p>
+    <h2>Contact & Area Covered</h2>
+    <p class="section-sub">Get in touch to book lessons or ask questions.</p>
 
     <div class="contact-grid">
       <div class="contact-card">
         <div class="contact-row">
-          <span class="contact-label">Phone:</span> 07xxx xxx xxx (demo)
+          <span class="contact-label">Phone:</span> <?php echo htmlspecialchars($settings['phone_number'] ?? ''); ?>
         </div>
         <div class="contact-row">
-          <span class="contact-label">WhatsApp:</span> Click the green button in the corner (demo)
+          <span class="contact-label">WhatsApp:</span> <?php echo htmlspecialchars($settings['whatsapp_number'] ?? ''); ?>
         </div>
         <div class="contact-row">
-          <span class="contact-label">Email:</span> info@yourdrivingschool.co.uk (demo)
+          <span class="contact-label">Email:</span> <?php echo htmlspecialchars($settings['email'] ?? ''); ?>
         </div>
         <div class="contact-row">
-          <span class="contact-label">Area covered:</span> Example: Salford, Manchester city centre, surrounding postcodes
+          <span class="contact-label">Area covered:</span> <?php echo htmlspecialchars($settings['service_area'] ?? ''); ?>
         </div>
         <div class="contact-row">
-          <span class="contact-label">Lesson times:</span> Mon–Fri evenings • Sat–Sun daytime (to be customised)
+          <span class="contact-label">Lesson times:</span> <?php echo htmlspecialchars($settings['lesson_times'] ?? ''); ?>
         </div>
       </div>
       <div class="map-placeholder">
-        Map Preview Area – Google Map will go here on live site
+        Map Area – You can embed Google Maps here
       </div>
     </div>
   </section>
 
-  <!-- FOOTER / MINI TERMS (DEMO) -->
+  <!-- FOOTER -->
   <footer>
     <div class="footer-inner">
-      <div>© 2025 Demo Driving School Website Prototype – For demonstration only, content to be replaced with real instructor details.</div>
-      <div>Terms & cancellation policy text can be linked here in the final build.</div>
+      <div>© <?php echo date('Y'); ?> <?php echo htmlspecialchars($settings['business_name'] ?? 'Anab Driving School'); ?>. All rights reserved.</div>
+      <div>
+        <?php if (!empty($settings['facebook_url'])): ?>
+          <a href="<?php echo htmlspecialchars($settings['facebook_url']); ?>" target="_blank" style="color: #9ca3af; margin-right: 12px;">Facebook</a>
+        <?php endif; ?>
+        <?php if (!empty($settings['instagram_url'])): ?>
+          <a href="<?php echo htmlspecialchars($settings['instagram_url']); ?>" target="_blank" style="color: #9ca3af;">Instagram</a>
+        <?php endif; ?>
+      </div>
     </div>
   </footer>
 
-  <!-- WHATSAPP FLOAT DEMO -->
-  <div class="wa-float">
-    <a href="#" class="wa-btn" onclick="alert('Demo only: this would open WhatsApp chat with the instructor.'); return false;">
-      <span class="wa-dot"></span>
-      WhatsApp Demo
-    </a>
-  </div>
+  <!-- WHATSAPP FLOAT -->
+  <?php if (!empty($settings['whatsapp_number'])): ?>
+    <div class="wa-float">
+      <a href="https://wa.me/<?php echo preg_replace('/[^0-9]/', '', $settings['whatsapp_number']); ?>" class="wa-btn" target="_blank">
+        <span class="wa-dot"></span>
+        WhatsApp Us
+      </a>
+    </div>
+  <?php endif; ?>
 
   <script>
-    // simple mobile nav toggle
+    // Mobile nav toggle
     const navToggle = document.getElementById('navToggle');
     const navLinks = document.getElementById('navLinks');
 
@@ -807,7 +861,7 @@
         navLinks.classList.toggle('open');
       });
 
-      // close menu when clicking a link (mobile)
+      // Close menu when clicking a link
       navLinks.querySelectorAll('a').forEach(a => {
         a.addEventListener('click', () => {
           navLinks.classList.remove('open');
