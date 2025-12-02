@@ -38,13 +38,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
     $package_id = intval($_POST['package_id']);
     $lesson_type = sanitize_input($_POST['lesson_type']);
     $preferred_date = $_POST['preferred_date'];
+    $preferred_time = $_POST['preferred_time'];
     $pickup_location = sanitize_input($_POST['pickup_location']);
     $notes = sanitize_input($_POST['notes']);
     
     try {
-        $stmt = $db->prepare("INSERT INTO bookings (full_name, mobile_number, email, contact_method, package_id, lesson_type, preferred_date, pickup_location, notes, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')");
+        $stmt = $db->prepare("INSERT INTO bookings (full_name, mobile_number, email, contact_method, package_id, lesson_type, preferred_date, preferred_time, pickup_location, notes, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')");
         
-        if ($stmt->execute([$full_name, $mobile_number, $email, $contact_method, $package_id, $lesson_type, $preferred_date, $pickup_location, $notes])) {
+        if ($stmt->execute([$full_name, $mobile_number, $email, $contact_method, $package_id, $lesson_type, $preferred_date, $preferred_time, $pickup_location, $notes])) {
             // Send email notification to admin
             $to = $settings['notification_email'] ?? 'anabdrivingschool@gmail.com';
             $subject = "New Booking Request - " . $full_name;
@@ -53,11 +54,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
             $message .= "Phone: $mobile_number\n";
             $message .= "Email: $email\n";
             $message .= "Preferred Date: $preferred_date\n";
+            $message .= "Preferred Time: $preferred_time\n";
             $message .= "Lesson Type: $lesson_type\n";
             $message .= "Pickup Location: $pickup_location\n";
             $message .= "Notes: $notes\n";
             
-            $headers = "From: " . ($settings['email'] ?? 'sagorahamed995@gmail.com');
+            $headers = "From: " . ($settings['email'] ?? 'anabdrivingschool@gmail.com');
             
             @mail($to, $subject, $message, $headers);
             
@@ -110,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
     }
     .nav-left { display:flex; align-items:center; gap:10px; }
     .logo-img {
-      height: 80px;
+      height: 40px;
       width: auto;
       object-fit: contain;
     }
@@ -755,6 +757,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
             <label>Preferred Date</label>
             <input type="date" name="preferred_date" required />
           </div>
+          <div>
+            <label>Preferred Time</label>
+            <input type="time" name="preferred_time" required />
+          </div>
         </div>
 
         <label>Pickup Location / Postcode</label>
@@ -831,38 +837,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
   </section>
 
   <!-- FOOTER -->
- <footer style="text-align: center;">
-  <div style="max-width: 1120px; margin: auto; padding: 30px 20px;">
-    
-    <!-- Copyright -->
-    <div style="margin-bottom: 15px; font-size: 14px;">
-      © <?php echo date('Y'); ?> Anab Driving School. All rights reserved.
-    </div>
-    
-    <!-- Social Links 
-    <div style="margin-bottom: 20px;">
-      <a href="#" style="color: #9ca3af; margin: 0 10px;">Facebook</a>
-      <a href="#" style="color: #9ca3af; margin: 0 10px;">Instagram</a>
-      <a href="#" style="color: #9ca3af; margin: 0 10px;">Contact</a>
-    </div>-->
-    
-    <!-- Developer Credit with Logo -->
-    <div style="border-top: 1px solid #374151; padding-top: 15px;">
-      <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
-        <span style="font-size: 12px; color: #6b7280;">Developed by</span>
-        <a href="#" target="_blank">
-          <img src="logo/sa.png" 
-               alt="SA" 
-               style="height: 20px; width: auto;">
-        </a>
+  <footer>
+    <div class="footer-inner">
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div>© <?php echo date('Y'); ?> <?php echo htmlspecialchars($settings['business_name'] ?? 'Anab Driving School'); ?>. All rights reserved.</div>
+        <div style="font-size: 11px; color: #6b7280;">
+          Website: <a href="<?php echo htmlspecialchars(SITE_URL); ?>" style="color: #9ca3af; text-decoration: none;"><?php echo str_replace(['http://', 'https://'], '', SITE_URL); ?></a>
+        </div>
+        <div style="font-size: 11px; color: #6b7280;">
+          Developed by <strong style="color: #ffb300;">SA InCreative</strong> • All rights reserved
+        </div>
       </div>
-      <div style="font-size: 10px; color: #6b7280; margin-top: 8px;">
-        All rights reserved
+      <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+        <?php if (!empty($settings['facebook_url'])): ?>
+          <a href="<?php echo htmlspecialchars($settings['facebook_url']); ?>" target="_blank" style="color: #9ca3af; text-decoration: none; font-size: 13px;">Facebook</a>
+        <?php endif; ?>
+        <?php if (!empty($settings['instagram_url'])): ?>
+          <a href="<?php echo htmlspecialchars($settings['instagram_url']); ?>" target="_blank" style="color: #9ca3af; text-decoration: none; font-size: 13px;">Instagram</a>
+        <?php endif; ?>
+        <a href="mailto:<?php echo htmlspecialchars($settings['email'] ?? ''); ?>" style="color: #9ca3af; text-decoration: none; font-size: 13px;">Contact</a>
       </div>
     </div>
-    
-  </div>
-</footer>
+  </footer>
 
   <!-- WHATSAPP FLOAT -->
   <?php if (!empty($settings['whatsapp_number'])): 

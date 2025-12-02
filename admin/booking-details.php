@@ -81,8 +81,15 @@ if (!$booking) {
                             </div>
                         </div>
 
-                        <?php if ($booking['contact_method'] === 'WhatsApp'): ?>
-                            <a href="https://wa.me/<?php echo preg_replace('/[^0-9]/', '', $booking['mobile_number']); ?>" 
+                        <?php if ($booking['contact_method'] === 'WhatsApp'): 
+                            // Format WhatsApp number
+                            $wa_number = preg_replace('/[^0-9]/', '', $booking['mobile_number']);
+                            if (substr($wa_number, 0, 1) === '0') {
+                                $wa_number = '44' . substr($wa_number, 1);
+                            }
+                            $wa_message = urlencode("Hi {$booking['full_name']}, this is Anab Driving School regarding your lesson booking on " . date('d/m/Y', strtotime($booking['preferred_date'])) . ".");
+                        ?>
+                            <a href="https://wa.me/<?php echo $wa_number; ?>?text=<?php echo $wa_message; ?>" 
                                target="_blank" 
                                class="btn-primary" 
                                style="display: inline-block; margin-top: 12px;">

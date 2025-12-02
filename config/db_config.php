@@ -18,12 +18,21 @@ define('MAX_FILE_SIZE', 5242880); // 5MB
 define('ALLOWED_IMAGE_TYPES', ['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
 
 // Email Settings (for booking notifications)
+//define('SMTP_HOST', 'smtp.gmail.com');
+//define('SMTP_PORT', 587);
+//define('SMTP_USER', 'anabdrivingschool@gmail.com');
+//define('SMTP_PASS', ''); // App-specific password for Gmail
+//define('SMTP_FROM', 'anabdrivingschool@gmail.com');
+//define('SMTP_FROM_NAME', 'Anab Driving School');
+
+// Email Settings - SMTP Configuration
 define('SMTP_HOST', 'smtp.gmail.com');
 define('SMTP_PORT', 587);
-define('SMTP_USER', 'anabdrivingschool@gmail.com');
-define('SMTP_PASS', ''); // App-specific password for Gmail
-define('SMTP_FROM', 'anabdrivingschool@gmail.com');
+define('SMTP_USER', 'sagorahamed995@gmail.com'); // Your Gmail
+define('SMTP_PASS', 'yhmvrvcgubifwuxp'); // Your 16-char App Password
+define('SMTP_FROM', 'sagorahamed995@gmail.com');
 define('SMTP_FROM_NAME', 'Anab Driving School');
+define('SMTP_ENCRYPTION', 'tls');
 
 // Twilio SMS Settings (Optional - for SMS notifications)
 define('TWILIO_SID', ''); // Your Twilio Account SID
