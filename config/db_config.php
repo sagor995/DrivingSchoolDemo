@@ -1,9 +1,9 @@
 <?php
 // Database Configuration
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root'); // Change to your MySQL username
-define('DB_PASS', ''); // Change to your MySQL password
-define('DB_NAME', 'driving_school');
+define('DB_HOST', 'db5019131468.hosting-data.io');
+define('DB_USER', 'dbu3809801'); // Change to your MySQL username
+define('DB_PASS', 'SA1289@.567it'); // Change to your MySQL password
+define('DB_NAME', 'dbs15035371');
 
 // Site Configuration
 define('SITE_URL', 'http://localhost/anab_driving'); // Change to your domain

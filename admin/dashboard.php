@@ -6,6 +6,19 @@ check_session_timeout();
 
 $db = Database::getInstance()->getConnection();
 
+// Handle maintenance mode toggle
+if (isset($_POST['toggle_maintenance'])) {
+    $current_mode = $db->query("SELECT setting_value FROM site_settings WHERE setting_key = 'maintenance_mode'")->fetch();
+    $new_mode = ($current_mode['setting_value'] === 'true') ? 'false' : 'true';
+    $db->prepare("UPDATE site_settings SET setting_value = ? WHERE setting_key = 'maintenance_mode'")->execute([$new_mode]);
+    header('Location: dashboard.php');
+    exit;
+}
+
+// Get maintenance mode status
+$maintenance_status = $db->query("SELECT setting_value FROM site_settings WHERE setting_key = 'maintenance_mode'")->fetch();
+$is_maintenance_on = ($maintenance_status && $maintenance_status['setting_value'] === 'true');
+
 // Get statistics
 $stats = [
     'pending_bookings' => $db->query("SELECT COUNT(*) FROM bookings WHERE status = 'Pending'")->fetchColumn(),
@@ -42,6 +55,32 @@ while ($row = $settings_query->fetch()) {
             <div class="page-header">
                 <h1>Dashboard</h1>
                 <p>Welcome back, <?php echo htmlspecialchars($_SESSION['admin_username']); ?>!</p>
+            </div>
+            <!-- Maintenance Mode Toggle -->
+            <div class="content-box" style="background: <?php echo $is_maintenance_on ? '#fee2e2' : '#d1fae5'; ?>; border-left: 4px solid <?php echo $is_maintenance_on ? '#ef4444' : '#10b981'; ?>;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                    <div>
+                        <h3 style="margin-bottom: 8px; color: #111;">
+                            <?php echo $is_maintenance_on ? '🚧 Maintenance Mode: ON' : '✅ Website: Live'; ?>
+                        </h3>
+                        <p style="font-size: 14px; color: #666; margin: 0;">
+                            <?php if ($is_maintenance_on): ?>
+                                Your website is currently showing "Under Development" page to visitors. Admin can still access.
+                            <?php else: ?>
+                                Your website is live and accessible to all visitors.
+                            <?php endif; ?>
+                        </p>
+                    </div>
+                    <form method="POST" style="margin: 0;">
+                        <button type="submit" 
+                                name="toggle_maintenance" 
+                                class="btn-primary" 
+                                style="background: <?php echo $is_maintenance_on ? '#10b981' : '#ef4444'; ?>; white-space: nowrap;"
+                                onclick="return confirm('<?php echo $is_maintenance_on ? 'Turn OFF maintenance mode and make website live?' : 'Turn ON maintenance mode? Visitors will see under development page.'; ?>')">
+                            <?php echo $is_maintenance_on ? '✅ Go Live' : '🚧 Enable Maintenance'; ?>
+                        </button>
+                    </form>
+                </div>
             </div>
 
             <!-- Statistics Cards -->

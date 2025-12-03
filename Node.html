@@ -1,0 +1,12 @@
+<?php
+$host   = "db5019131468.hosting-data.io";  // from IONOS DB details
+$dbname = "dbs15035371";                  // database name
+$user   = "dbu3809801";                 // database user
+$pass   = "SA1289@.567it";           // database password
+
+try {
+    $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8", $user, $pass);
+    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+} catch (PDOException $e) {
+    die("DB Connection Failed: " . $e->getMessage());
+}

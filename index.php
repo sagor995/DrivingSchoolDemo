@@ -3,6 +3,111 @@ require_once 'config/db_config.php';
 
 $db = Database::getInstance()->getConnection();
 
+// Check if maintenance mode is enabled
+$maintenance_check = $db->query("SELECT setting_value FROM site_settings WHERE setting_key = 'maintenance_mode' LIMIT 1")->fetch();
+$is_maintenance = ($maintenance_check && $maintenance_check['setting_value'] === 'true');
+
+// If maintenance mode is ON and user is not admin, show maintenance page
+if ($is_maintenance && !isset($_SESSION['admin_logged_in'])) {
+    $maintenance_msg = $db->query("SELECT setting_value FROM site_settings WHERE setting_key = 'maintenance_message' LIMIT 1")->fetch();
+    $message = $maintenance_msg ? $maintenance_msg['setting_value'] : 'Website is under development. We will be back soon!';
+    ?>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Under Development</title>
+        <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body {
+                font-family: system-ui, -apple-system, sans-serif;
+                background: radial-gradient(circle at top, #1e90ff 0, #001f3f 45%, #000 100%);;
+                min-height: 100vh;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+            }
+            .container {
+                background: white;
+                border-radius: 20px;
+                padding: 60px 40px;
+                text-align: center;
+                max-width: 600px;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            }
+            .icon {
+                font-size: 80px;
+                margin-bottom: 20px;
+                animation: bounce 2s infinite;
+            }
+            @keyframes bounce {
+                0%, 100% { transform: translateY(0); }
+                50% { transform: translateY(-20px); }
+            }
+            h1 {
+                font-size: 32px;
+                color: #111;
+                margin-bottom: 15px;
+            }
+            p {
+                font-size: 18px;
+                color: #666;
+                line-height: 1.6;
+                margin-bottom: 30px;
+            }
+            .logo {
+                width: 120px;
+                height: 120px;
+                margin: 0 auto 20px;
+                border-radius: 50%;
+                background: radial-gradient(circle at 30% 20%, #fff 0, #ffdd80 20%, #ffb300 50%, #b77400 100%);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 60px;
+                font-weight: 700;
+                color: #111;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            }
+            .admin-link {
+                margin-top: 20px;
+                padding-top: 20px;
+                border-top: 1px solid #e5e7eb;
+            }
+            .admin-link a {
+                color: #667eea;
+                text-decoration: none;
+                font-size: 14px;
+                font-weight: 600;
+            }
+            .admin-link a:hover {
+                text-decoration: underline;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <img src="uploads/logo_1764629433.png" alt="Anab Driving School Logo" class="logo">
+            <div class="icon">🚧</div>
+            <h1>Under Development</h1>
+            <p><?php echo htmlspecialchars($message); ?></p>
+            <p class="info-label">Need to contact us before launch?</p>
+        <p class="info-value">
+            <strong>Call / WhatsApp:</strong> <span>+447915067832</span><br>
+        </p>
+          <!--  <div class="admin-link">
+                <a href="admin/login.php">Admin Login →</a>
+            </div>-->
+        </div>
+        
+    </body>
+    </html>
+    <?php
+    exit;
+}
+
 // Get site settings
 $settings_query = $db->query("SELECT setting_key, setting_value FROM site_settings");
 $settings = [];
@@ -833,7 +938,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
   <!-- FOOTER -->
  <footer style="text-align: center;">
   <div style="max-width: 1120px; margin: auto; padding: 30px 20px;">
-    
     <!-- Copyright -->
     <div style="margin-bottom: 15px; font-size: 14px;">
       © <?php echo date('Y'); ?> Anab Driving School. All rights reserved.

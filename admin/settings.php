@@ -193,6 +193,28 @@ while ($row = $settings_query->fetch()) {
                         </div>
                     </div>
                 </div>
+                <!-- Maintenance Mode -->
+                <div class="content-box" style="border-left: 4px solid #f59e0b;">
+                    <h2>🚧 Maintenance Mode</h2>
+                    <p style="margin-bottom: 15px; font-size: 14px; color: #666;">
+                        Enable this to show "Under Development" page to visitors while you work on the site. Admin can still access.
+                    </p>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" name="maintenance_mode" value="true" <?php echo ($settings['maintenance_mode'] ?? 'false') === 'true' ? 'checked' : ''; ?>>
+                            <strong>Enable Maintenance Mode</strong> (Show "Under Development" page)
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Maintenance Message</label>
+                        <textarea name="maintenance_message" rows="3" placeholder="Website is under development. We will be back soon!"><?php echo htmlspecialchars($settings['maintenance_message'] ?? 'Website is under development. We will be back soon!'); ?></textarea>
+                        <small style="display: block; margin-top: 5px; color: #666;">
+                            This message will be shown to visitors when maintenance mode is ON.
+                        </small>
+                    </div>
+                </div>
 
                 <div class="content-box">
                     <button type="submit" name="update_settings" class="btn-primary">Save All Settings</button>
