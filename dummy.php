@@ -1,153 +1,240 @@
-v1-- Create Database
-CREATE DATABASE IF NOT EXISTS driving_school CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE driving_school;
+v333<?php
+session_start();
+require_once '../config/db_config.php';
+require_admin_login();
+check_session_timeout();
 
--- Admin Users Table
-CREATE TABLE admin_users (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    username VARCHAR(50) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    email VARCHAR(100) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    last_login TIMESTAMP NULL
-);
+$db = Database::getInstance()->getConnection();
+$message = '';
 
--- Site Settings Table
-CREATE TABLE site_settings (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    setting_key VARCHAR(100) UNIQUE NOT NULL,
-    setting_value TEXT,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+// Handle settings update
+if (isset($_POST['update_settings'])) {
+    foreach ($_POST as $key => $value) {
+        if ($key !== 'update_settings') {
+            $clean_value = sanitize_input($value);
+            $stmt = $db->prepare("UPDATE site_settings SET setting_value = ? WHERE setting_key = ?");
+            $stmt->execute([$clean_value, $key]);
+        }
+    }
+    $message = '<div class="alert alert-success">Settings updated successfully!</div>';
+}
 
--- Packages Table
-CREATE TABLE packages (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    package_name VARCHAR(200) NOT NULL,
-    price DECIMAL(10,2) NOT NULL,
-    duration VARCHAR(100),
-    description TEXT,
-    car_type ENUM('Manual', 'Automatic', 'Both') DEFAULT 'Both',
-    features TEXT,
-    is_featured BOOLEAN DEFAULT FALSE,
-    display_order INT DEFAULT 0,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+// Handle logo upload
+if (isset($_FILES['logo']) && $_FILES['logo']['error'] === 0) {
+    $file = $_FILES['logo'];
+    $allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    
+    if (in_array($file['type'], $allowed) && $file['size'] <= MAX_FILE_SIZE) {
+        // Get old logo path to delete it
+        $old_logo_query = $db->query("SELECT setting_value FROM site_settings WHERE setting_key = 'logo_path'");
+        $old_logo = $old_logo_query->fetch();
+        
+        // Delete old logo file if it exists
+        if ($old_logo && !empty($old_logo['setting_value'])) {
+            $old_file = '../' . $old_logo['setting_value'];
+            if (file_exists($old_file) && is_file($old_file)) {
+                @unlink($old_file); // Delete old file
+            }
+        }
+        
+        // Upload new logo
+        $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $filename = 'logo_' . time() . '.' . $ext;
+        $destination = UPLOAD_DIR . $filename;
+        
+        if (move_uploaded_file($file['tmp_name'], $destination)) {
+            $stmt = $db->prepare("UPDATE site_settings SET setting_value = ? WHERE setting_key = 'logo_path'");
+            $stmt->execute(['uploads/' . $filename]);
+            $message = '<div class="alert alert-success">Logo uploaded successfully! Old logo has been removed.</div>';
+        }
+    } else {
+        $message = '<div class="alert alert-error">Invalid file type or size too large (max 5MB).</div>';
+    }
+}
 
--- Key Highlights Table
-CREATE TABLE key_highlights (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    highlight_text VARCHAR(255) NOT NULL,
-    display_order INT DEFAULT 0,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+// Get all settings
+$settings_query = $db->query("SELECT setting_key, setting_value FROM site_settings");
+$settings = [];
+while ($row = $settings_query->fetch()) {
+    $settings[$row['setting_key']] = $row['setting_value'];
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site Settings - Admin</title>
+    <link rel="stylesheet" href="css/admin-style.css">
+</head>
+<body>
+    <?php include 'includes/header.php'; ?>
+    
+    <div class="admin-layout">
+        <?php include 'includes/sidebar.php'; ?>
+        
+        <main class="admin-main">
+            <div class="page-header">
+                <h1>Site Settings</h1>
+                <p>Update your website content and contact information</p>
+            </div>
 
--- FAQ Table
-CREATE TABLE faqs (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    question TEXT NOT NULL,
-    answer TEXT NOT NULL,
-    display_order INT DEFAULT 0,
-    is_active BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-);
+            <?php echo $message; ?>
 
--- Testimonials Table
-CREATE TABLE testimonials (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    student_name VARCHAR(100) NOT NULL,
-    review_text TEXT NOT NULL,
-    lesson_type VARCHAR(100),
-    rating INT DEFAULT 5,
-    is_approved BOOLEAN DEFAULT TRUE,
-    display_order INT DEFAULT 0,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+            <form method="POST" enctype="multipart/form-data">
+                
+                <!-- Business Information -->
+                <div class="content-box">
+                    <h2>Business Information</h2>
+                    
+                    <div class="form-row">
+                        <div>
+                            <label>Business Name</label>
+                            <input type="text" name="business_name" value="<?php echo htmlspecialchars($settings['business_name'] ?? ''); ?>">
+                        </div>
+                        <div>
+                            <label>Service Area</label>
+                            <input type="text" name="service_area" value="<?php echo htmlspecialchars($settings['service_area'] ?? ''); ?>" placeholder="e.g., Bolton, Manchester">
+                        </div>
+                    </div>
 
--- Bookings Table
-CREATE TABLE bookings (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    full_name VARCHAR(100) NOT NULL,
-    mobile_number VARCHAR(20) NOT NULL,
-    email VARCHAR(100),
-    contact_method ENUM('WhatsApp', 'Phone Call', 'Email') DEFAULT 'WhatsApp',
-    package_id INT,
-    lesson_type ENUM('Manual', 'Automatic', 'Either') DEFAULT 'Either',
-    preferred_date DATE,
-    preferred_time TIME,
-    pickup_location VARCHAR(255),
-    notes TEXT,
-    status ENUM('Pending', 'Confirmed', 'Cancelled', 'Completed') DEFAULT 'Pending',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (package_id) REFERENCES packages(id) ON DELETE SET NULL
-);
+                    <div class="form-row">
+                        <div>
+                            <label>Phone Number</label>
+                            <input type="tel" name="phone_number" value="<?php echo htmlspecialchars($settings['phone_number'] ?? ''); ?>">
+                        </div>
+                        <div>
+                            <label>WhatsApp Number</label>
+                            <input type="tel" name="whatsapp_number" value="<?php echo htmlspecialchars($settings['whatsapp_number'] ?? ''); ?>">
+                        </div>
+                    </div>
 
--- Hero Badges Table
-CREATE TABLE hero_badges (
-    id INT PRIMARY KEY AUTO_INCREMENT,
-    badge_text VARCHAR(100) NOT NULL,
-    display_order INT DEFAULT 0,
-    is_active BOOLEAN DEFAULT TRUE
-);
+                    <div class="form-row">
+                        <div>
+                            <label>Email Address</label>
+                            <input type="email" name="email" value="<?php echo htmlspecialchars($settings['email'] ?? ''); ?>">
+                        </div>
+                        <div>
+                            <label>Notification Email (for bookings)</label>
+                            <input type="email" name="notification_email" value="<?php echo htmlspecialchars($settings['notification_email'] ?? ''); ?>">
+                        </div>
+                    </div>
 
--- Insert Default Admin (password: admin123 - CHANGE THIS!)
-INSERT INTO admin_users (username, password, email) 
-VALUES ('admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'anabdrivingschool@gmail.com');
+                    <div class="form-group">
+                        <label>Lesson Times</label>
+                        <input type="text" name="lesson_times" value="<?php echo htmlspecialchars($settings['lesson_times'] ?? ''); ?>" placeholder="e.g., Mon–Fri evenings • Sat–Sun daytime">
+                    </div>
+                </div>
 
--- Insert Default Site Settings
-INSERT INTO site_settings (setting_key, setting_value) VALUES
-('business_name', 'Anab Driving School'),
-('phone_number', '07XXX XXX XXX'),
-('whatsapp_number', '07XXX XXX XXX'),
-('email', 'anabdrivingschool@gmail.com'),
-('service_area', 'Bolton'),
-('hero_title', 'Confident Driving Starts Here.'),
-('hero_subtitle', 'Manual & automatic driving lessons tailored for beginners, nervous drivers and test-ready learners. Local pick-up, flexible hours and patient, friendly instruction.'),
-('hero_tag', 'DVSA-Style Professional Training'),
-('about_title', 'Friendly, Patient and Focused on Real-World Driving.'),
-('about_description', 'This section will introduce the real instructor – their experience, qualifications and teaching approach.'),
-('lesson_times', 'Mon–Fri evenings • Sat–Sun daytime'),
-('logo_path', 'uploads/logo.png'),
-('terms_conditions', ''),
-('privacy_policy', ''),
-('facebook_url', ''),
-('instagram_url', ''),
-('notification_email', 'anabdrivingschool@gmail.com');
+                <!-- Logo Upload -->
+                <div class="content-box">
+                    <h2>Logo</h2>
+                    <?php if (!empty($settings['logo_path'])): ?>
+                        <div style="margin-bottom: 16px;">
+                            <p><strong>Current Logo:</strong></p>
+                            <img src="../<?php echo htmlspecialchars($settings['logo_path']); ?>" alt="Logo" style="max-width: 200px; border: 1px solid #ddd; padding: 10px; border-radius: 8px;">
+                        </div>
+                    <?php endif; ?>
+                    <div class="form-group">
+                        <label>Upload New Logo (JPG, PNG, GIF, WebP - Max 5MB)</label>
+                        <input type="file" name="logo" accept="image/*">
+                    </div>
+                </div>
 
--- Insert Sample Packages
-INSERT INTO packages (package_name, price, duration, description, car_type, features, display_order) VALUES
-('Beginner Taster – 2 Hours', 70.00, '2 Hours', 'Perfect if you've never driven before and want to experience the car in a quiet area.', 'Both', 'Manual or automatic car|Pick-up from home or campus|Basic controls & moving off', 1),
-('10 Hour Starter Pack', 290.00, '10 Hours', 'Ideal for learners starting from scratch and wanting consistent weekly lessons.', 'Both', 'Structured lesson plan|City & suburban routes|Progress updates every session', 2),
-('Test Booster – 5 Hours', 160.00, '5 Hours', 'For learners with an upcoming test who want to sharpen their skills and practise routes.', 'Both', 'Focus on common test faults|Roundabouts, parking & manoeuvres|Mock test with feedback', 3),
-('Motorway & Confidence Session', 50.00, '1 Hour', 'Great for new full licence holders or nervous drivers looking to gain extra confidence.', 'Both', 'Motorway & dual carriageways|Night driving or bad-weather practice|Fully customised to your needs', 4);
+                <!-- Hero Section -->
+                <div class="content-box">
+                    <h2>Hero Section (Homepage Top)</h2>
+                    
+                    <div class="form-group">
+                        <label>Hero Tag Line</label>
+                        <input type="text" name="hero_tag" value="<?php echo htmlspecialchars($settings['hero_tag'] ?? ''); ?>" placeholder="e.g., DVSA-Style Professional Training">
+                    </div>
 
--- Insert Sample Key Highlights
-INSERT INTO key_highlights (highlight_text, display_order) VALUES
-('DVSA-qualified instructor', 1),
-('Years of local driving experience around Bolton', 2),
-('Flexible lesson times around work, college and school runs', 3),
-('Support with theory test preparation and hazard perception', 4),
-('Clear progress tracking from first drive to test day', 5);
+                    <div class="form-group">
+                        <label>Main Headline</label>
+                        <input type="text" name="hero_title" value="<?php echo htmlspecialchars($settings['hero_title'] ?? ''); ?>">
+                    </div>
 
--- Insert Sample FAQs
-INSERT INTO faqs (question, answer, display_order) VALUES
-('How long are your driving lessons?', 'Most lessons are 60 minutes as standard, but 90-minute and 2-hour blocks can be arranged.', 1),
-('What is your cancellation policy?', 'We require 24–48 hours notice to avoid being charged. Please contact us as soon as possible if you need to reschedule.', 2),
-('Do you pick up from home, college or work?', 'Yes, we offer flexible pick-up within Bolton and surrounding areas. We can collect you from home, university, or workplace.', 3);
+                    <div class="form-group">
+                        <label>Hero Subtitle</label>
+                        <textarea name="hero_subtitle" rows="3"><?php echo htmlspecialchars($settings['hero_subtitle'] ?? ''); ?></textarea>
+                    </div>
+                </div>
 
--- Insert Sample Hero Badges
-INSERT INTO hero_badges (badge_text, display_order) VALUES
-('Beginner & Refresher Lessons', 1),
-('Test Route Practice', 2),
-('Flexible Evening & Weekend Slots', 3);
+                <!-- About Section -->
+                <div class="content-box">
+                    <h2>About Section</h2>
+                    
+                    <div class="form-group">
+                        <label>About Title</label>
+                        <input type="text" name="about_title" value="<?php echo htmlspecialchars($settings['about_title'] ?? ''); ?>">
+                    </div>
 
--- Insert Sample Testimonials
-INSERT INTO testimonials (student_name, review_text, lesson_type, rating, display_order) VALUES
-('Sarah M.', 'Honestly the best instructor I could have asked for. Calm, clear and made every lesson feel manageable instead of scary. Passed first time!', 'Manual lessons – city centre routes', 5, 1),
-('James T.', 'I was a very nervous driver but the lessons were always patient and encouraging. We practised my actual test routes and that really helped.', 'Refresher & test booster package', 5, 2),
-('Amira K.', 'Great communication, flexible with evenings and weekends. I liked the clear feedback after each session so I knew what to focus on next.', 'Automatic lessons – after work slots', 5, 3);
+                    <div class="form-group">
+                        <label>About Description</label>
+                        <textarea name="about_description" rows="6"><?php echo htmlspecialchars($settings['about_description'] ?? ''); ?></textarea>
+                    </div>
+                </div>
+
+                <!-- Terms & Policies -->
+                <div class="content-box">
+                    <h2>Terms & Policies</h2>
+                    
+                    <div class="form-group">
+                        <label>Terms & Conditions</label>
+                        <textarea name="terms_conditions" rows="6"><?php echo htmlspecialchars($settings['terms_conditions'] ?? ''); ?></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Privacy Policy</label>
+                        <textarea name="privacy_policy" rows="6"><?php echo htmlspecialchars($settings['privacy_policy'] ?? ''); ?></textarea>
+                    </div>
+                </div>
+
+                <!-- Social Media -->
+                <div class="content-box">
+                    <h2>Social Media Links (Optional)</h2>
+                    
+                    <div class="form-row">
+                        <div>
+                            <label>Facebook URL</label>
+                            <input type="url" name="facebook_url" value="<?php echo htmlspecialchars($settings['facebook_url'] ?? ''); ?>" placeholder="https://facebook.com/yourpage">
+                        </div>
+                        <div>
+                            <label>Instagram URL</label>
+                            <input type="url" name="instagram_url" value="<?php echo htmlspecialchars($settings['instagram_url'] ?? ''); ?>" placeholder="https://instagram.com/yourpage">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Maintenance Mode -->
+                <div class="content-box" style="border-left: 4px solid #f59e0b;">
+                    <h2>🚧 Maintenance Mode</h2>
+                    <p style="margin-bottom: 15px; font-size: 14px; color: #666;">
+                        Enable this to show "Under Development" page to visitors while you work on the site. Admin can still access.
+                    </p>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" name="maintenance_mode" value="true" <?php echo ($settings['maintenance_mode'] ?? 'false') === 'true' ? 'checked' : ''; ?>>
+                            <strong>Enable Maintenance Mode</strong> (Show "Under Development" page)
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Maintenance Message</label>
+                        <textarea name="maintenance_message" rows="3" placeholder="Website is under development. We will be back soon!"><?php echo htmlspecialchars($settings['maintenance_message'] ?? 'Website is under development. We will be back soon!'); ?></textarea>
+                        <small style="display: block; margin-top: 5px; color: #666;">
+                            This message will be shown to visitors when maintenance mode is ON.
+                        </small>
+                    </div>
+                </div>
+
+                <div class="content-box">
+                    <button type="submit" name="update_settings" class="btn-primary">Save All Settings</button>
+                </div>
+            </form>
+        </main>
+    </div>
+</body>
+</html>

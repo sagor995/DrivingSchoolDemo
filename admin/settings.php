@@ -25,6 +25,19 @@ if (isset($_FILES['logo']) && $_FILES['logo']['error'] === 0) {
     $allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     
     if (in_array($file['type'], $allowed) && $file['size'] <= MAX_FILE_SIZE) {
+        // Get old logo path to delete it
+        $old_logo_query = $db->query("SELECT setting_value FROM site_settings WHERE setting_key = 'logo_path'");
+        $old_logo = $old_logo_query->fetch();
+        
+        // Delete old logo file if it exists
+        if ($old_logo && !empty($old_logo['setting_value'])) {
+            $old_file = '../' . $old_logo['setting_value'];
+            if (file_exists($old_file) && is_file($old_file)) {
+                @unlink($old_file); // Delete old file
+            }
+        }
+        
+        // Upload new logo
         $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
         $filename = 'logo_' . time() . '.' . $ext;
         $destination = UPLOAD_DIR . $filename;
@@ -32,10 +45,10 @@ if (isset($_FILES['logo']) && $_FILES['logo']['error'] === 0) {
         if (move_uploaded_file($file['tmp_name'], $destination)) {
             $stmt = $db->prepare("UPDATE site_settings SET setting_value = ? WHERE setting_key = 'logo_path'");
             $stmt->execute(['uploads/' . $filename]);
-            $message = '<div class="alert alert-success">Logo uploaded successfully!</div>';
+            $message = '<div class="alert alert-success">Logo uploaded successfully! Old logo has been removed.</div>';
         }
     } else {
-        $message = '<div class="alert alert-error">Invalid file type or size too large.</div>';
+        $message = '<div class="alert alert-error">Invalid file type or size too large (max 5MB).</div>';
     }
 }
 
@@ -193,6 +206,7 @@ while ($row = $settings_query->fetch()) {
                         </div>
                     </div>
                 </div>
+                
                 <!-- Maintenance Mode -->
                 <div class="content-box" style="border-left: 4px solid #f59e0b;">
                     <h2>🚧 Maintenance Mode</h2>
