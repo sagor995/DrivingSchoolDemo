@@ -149,24 +149,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_booking'])) {
     try {
         $stmt = $db->prepare("INSERT INTO bookings (full_name, mobile_number, email, contact_method, package_id, lesson_type, preferred_date, pickup_location, notes, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Pending')");
         
-        if ($stmt->execute([$full_name, $mobile_number, $email, $contact_method, $package_id, $lesson_type, $preferred_date, $pickup_location, $notes])) {
-            // Send email notification to admin
-            $to = $settings['notification_email'] ?? 'anabdrivingschool@gmail.com';
-            $subject = "New Booking Request - " . $full_name;
-            $message = "New booking request received:\n\n";
-            $message .= "Name: $full_name\n";
-            $message .= "Phone: $mobile_number\n";
-            $message .= "Email: $email\n";
-            $message .= "Preferred Date: $preferred_date\n";
-            $message .= "Lesson Type: $lesson_type\n";
-            $message .= "Pickup Location: $pickup_location\n";
-            $message .= "Notes: $notes\n";
-            
-            $headers = "From: " . ($settings['email'] ?? 'sagorahamed995@gmail.com');
-            
-            @mail($to, $subject, $message, $headers);
-            
-            $booking_message = '<div class="alert alert-success" style="margin: 20px; padding: 14px; background: #d1fae5; color: #065f46; border-radius: 8px;">✅ Booking request submitted successfully! We will contact you shortly.</div>';
+       if ($stmt->execute([$full_name, $mobile_number, $email, $contact_method, $package_id, $lesson_type, $preferred_date, $pickup_location, $notes])) {
+
+            // Find package name from $packages list
+            $package_name = '';
+            foreach ($packages as $pkg) {
+                if ((int)$pkg['id'] === $package_id) {
+                    $package_name = $pkg['package_name'];
+                    break;
+                }
+            }
+
+            // Build booking data array for email_helper
+            $booking_data = [
+                'full_name'       => $full_name,
+                'mobile_number'   => $mobile_number,
+                'email'           => $email,
+                'contact_method'  => $contact_method,
+                'package_name'    => $package_name,
+                'lesson_type'     => $lesson_type,
+                'preferred_date'  => $preferred_date,
+                'pickup_location' => $pickup_location,
+                'notes'           => $notes,
+            ];
+
+            // NEW: use PHPMailer SMTP ✅
+            send_booking_email($booking_data);                    // to admin
+            send_booking_confirmation_to_student($booking_data);  // to student (same as test-email.php)
+
+           $booking_message = '<div class="alert alert-success" style="margin: 20px; padding: 14px; background: #d1fae5; color: #065f46; border-radius: 8px;">✅ Booking request submitted successfully! We will contact you shortly.</div>';
         }
     } catch (PDOException $e) {
         $booking_message = '<div class="alert alert-error" style="margin: 20px; padding: 14px; background: #fee2e2; color: #991b1b; border-radius: 8px;">❌ There was an error submitting your booking. Please try again or call us directly.</div>';
